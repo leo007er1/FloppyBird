@@ -46,8 +46,8 @@ update_pipes:
 collide_pipe:
 	push si
 
-	mov si, pipes
-	add si, [pipe_a]
+	lea si, pipes
+	add si, word [pipe_a]
 
 	cmp word [si], 92
 	jg .end
@@ -127,7 +127,10 @@ draw_pipe:
 	push bp
 	mov bp, sp
 	
-	pusha
+	push ax
+	push bx
+	push cx
+	push dx
 
 	mov ax, word [bp+4]
 	mov bx, 2
@@ -157,8 +160,8 @@ draw_pipe:
 	jnz .body
 
 	mov ax, [bp+6]
-	cmp ax, 0
-	jne .top
+	or ax, ax
+	jnz .top
 
 	mov ax, [bp+4]
 	sub ax, 4
@@ -184,9 +187,14 @@ draw_pipe:
 	push 0
 	call blit
 
-	popa
+	pop dx
+	pop cx
+	pop bx
+	pop ax
 	pop bp
+
 	ret 6			; 3 param * 2 bytes
+
 
 randomize_pipes:
 	push si
@@ -232,8 +240,8 @@ randomize_pipe_height:
 	xor dx, dx
 	div bx
 
-	cmp dx, 0
-	jne randomize_pipe_height
+	or dx, dx
+	jnz randomize_pipe_height
 
 	mov ax, cx
 	ret

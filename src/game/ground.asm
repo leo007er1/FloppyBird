@@ -1,6 +1,6 @@
 draw_ground:
 	push dx
-	mov dx, 0
+	xor dx, dx
 
 	push 0			; x
 	push 156		; y

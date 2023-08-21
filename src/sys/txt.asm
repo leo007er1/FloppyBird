@@ -4,12 +4,12 @@
 ; RETURN	: n/a
 ; =====================================
 set_text_mode:
-	pusha
+	push ax
 
 	mov ax, 0x3		; 80x25 @ 16 color mode
 	int 10h			; call BIOS interrupt
 
-	popa
+	pop ax
 	ret	
 
 ; ==============================
@@ -18,7 +18,7 @@ set_text_mode:
 ; RETURN	: n/a
 ; ==============================
 reboot:
-	mov ax, 0
+	xor ax, ax
 	int 19h
 	ret
 
@@ -28,19 +28,13 @@ reboot:
 ; RETURN	: returns key hit in AX
 ; ==================================
 getch:
-	pusha
-
-	mov ax, 0		; get key hit function (will block)
+	xor ah, ah		; get key hit function (will block)
 	int 16h			; call BIOS interrupt
 
-	mov [.key], ax
-
-	popa
-	
-	mov ax, [.key]
+	mov word [.key], ax
 	ret	
 
-	.key: dw 0
+.key: dw 0
 
 ; ==================================
 ; PROTOTYPE	: short kbhit(void)
@@ -48,30 +42,22 @@ getch:
 ; RETURN	: returns key hit in AX
 ; ==================================
 kbhit:
-	pusha
-
 	mov al, 0			; check for any keys hit
 	mov ah, 1			; but do not block (async)
 	int 16h				; call BIOS interrupt
 	jz .end				; if no keys hit jump to end
 
-	mov ax, 0			; get key hit function
+	xor ax, ax			; get key hit function
 	int 16h				; call BIOS interrupt
 
-	mov [.key], ax
-
-	popa
-	
-	mov ax, [.key]
+	mov word [.key], ax
 	ret		
 
-.end:
-	popa
+	.end:
+		xor ax, ax			; set AX to 0 if no keys hit
+		ret
 
-	mov ax, 0			; set AX to 0 if no keys hit
-	ret
-
-	.key: dw 0
+.key: dw 0
 
 ; ===========================================
 ; PROTOTYPE	: void puts(char *s)
@@ -79,22 +65,21 @@ kbhit:
 ; RETURN	: n/a
 ; ===========================================
 puts:
-	pusha
+	push ax
+	mov ah, byte 0xe ; Teletype function
 
-.loop:
-	lodsb		; move byte [DS:SI] into AL
+	.loop:
+		lodsb		; move byte [DS:SI] into AL
 
-	cmp al, 0	; 0 == end of string ?
-	je .end
+		or al, al	; 0 == end of string ?
+		jz .end
 
-	mov ah, 0Eh ; display character function
-	int 10h		; call BIOS interrupt
+		int 10h		; call BIOS interrupt
+		jmp .loop	; next character
 
-	jmp .loop	; next character
-
-.end:
-	popa
-	ret
+	.end:
+		pop ax
+		ret
 
 ; =======================================
 ; PROTOTYPE	: void putc(char ch)
@@ -102,10 +87,10 @@ puts:
 ; RETURN	: n/a
 ; =======================================
 putc:
-	pusha
+	push ax
 
-	mov ah, 0Eh ; display character function
+	mov ah, byte 0xe ; Teletype function
 	int 10h		; call BIOS interrupt
 
-	popa
+	pop ax
 	ret

@@ -2,7 +2,7 @@ draw_clouds:
 	push ax
 	push cx
 
-	mov ax, 0
+	xor ax, ax
 
 .clouds:
 	push clouds

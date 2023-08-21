@@ -6,14 +6,11 @@
 ticks:
 	push ax
 
-	mov ax, 0			; get tick count function 
-	int 1Ah				; call BIOS interrupt
-
-	mov [.ticks], dx
+	xor ah, ah ; Get tick count function 
+	int 0x1a
+	mov word [.ticks], dx
 
 	pop ax
-
-	mov dx, [.ticks]
 	ret
 
 	.ticks dw 0
@@ -24,19 +21,15 @@ ticks:
 ; RETURN	: n/a
 ; ============================================================
 sleep:
-	pusha
+	push ax
+	push cx
+	push dx
 
-	mov ax, 0	; get tick count function
-	mov bx, dx	; save ms
+	mov ah, byte 0x86
+	mov cx, word 1
+	int 0x15
 
-	int 1Ah		; call BIOS interrupt
-	add bx, dx	; ms + ticks
-
-.wait:
-	int 1Ah		; call BIOS interrupt
-
-	cmp dx, bx
-	jne .wait	; loop until we waited for ms amount
-
-	popa
+	pop dx
+	pop cx
+	pop ax
 	ret

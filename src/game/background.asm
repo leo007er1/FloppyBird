@@ -1,24 +1,28 @@
 draw_background:
-	pusha
+	push ax
+	push cx
+	push di
 
-	mov cx, VIDMEM		; pointer to screen buffer
-	mov es, cx			;
-	xor di, di			; index 0
+	mov cx, VIDMEM
+	mov es, cx
+	xor di, di ; index 0
 	
 	mov al, byte [backgroundcolor]
 	mov ah, al
 
-	mov cx, VIDMES / 4	; 64000 / 4
-	add cx, VIDMEW * 2	; 2 rows
+	mov cx, (VIDMES / 4) + (VIDMEW * 2)	; 64000 / 4 + 2 rows
+	rep stosw
 
-	rep stosw			; store AX (2 bytes) in [ES:DI]
-
-	popa
+	pop di
+	pop cx
+	pop ax
 	ret
+
 
 randomize_backgroundcolor:
 	call random
 	mov word [backgroundcolor], ax
 	ret
+
 
 backgroundcolor: dw 3

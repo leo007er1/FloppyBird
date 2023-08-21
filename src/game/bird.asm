@@ -1,12 +1,14 @@
 reset_bird:
-	mov word [bird_pos+0], 60
-	mov word [bird_pos+2], 60
+	mov word [bird_pos], 60
+	mov word [bird_pos + 2], 60
 	ret
 
+
 center_bird:
-	mov word [bird_pos+0], 144
-	mov word [bird_pos+2], 60
+	mov word [bird_pos], 144
+	mov word [bird_pos + 2], 60
 	ret
+
 
 update_bird:
 	mov ax, word [bird_pos + 2] ; sy
@@ -19,7 +21,7 @@ update_bird:
 
 	call kbhit
 
-	test al, al					; no key was ...
+	or al, al					; no key was ...
 	jz .fall					; pressed then just fall ...
 
 	call animate_bird			; animate bird
@@ -44,8 +46,9 @@ animate_bird:
 	jle .end					; if not, then we can jump right away
 	
 	mov word [bird_frm], 0		; reset animation to the first frame
-.end:
-	ret
+	
+	.end:
+		ret
 
 draw_bird:
 	push bird
@@ -68,6 +71,12 @@ randomize_birdcolor:
 	mov word [bird_tint], ax
 	ret
 
-bird_pos: dw 60, 60, 32, 24 ; x, y, w, h
-bird_frm: dw 0				; current animation frame (X in pixels)
-bird_tint: dw 0				; crazy tint :P
+draw_bird_data:
+	dw bird
+	dw 96 ; pw
+	dw 24 ; ph
+	bird_frm: dw 0 ; Current animation frame (X in pixels)
+	dw 0 ; sy
+	bird_pos: dw 60, 60, 32, 24 ; x, y, w, h
+	dw 0 ; Transparent color
+	bird_tint: dw 0

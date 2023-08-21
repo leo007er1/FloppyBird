@@ -30,7 +30,10 @@ draw_number:
 	push bp
 	mov bp, sp
 
-	pusha
+	push ax
+	push bx
+	push cx
+	push dx
 
 	mov ax, [bp+4]
 	mov bx, 10
@@ -42,7 +45,7 @@ draw_number:
 	inc cx
 
 	push dx
-	test ax, ax
+	or ax, ax
 	jnz .loop
 
 	mov ax, 8
@@ -80,8 +83,12 @@ draw_number:
 	dec cx
 	jnz .blit
 
-	popa
+	pop dx
+	pop cx
+	pop bx
+	pop ax
 	pop bp
+
 	ret 2		; 1 params * 2 bytes
 
 score:		dw 0	; current score

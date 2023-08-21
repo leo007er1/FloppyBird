@@ -3,6 +3,7 @@
 %define VIDMES 64000	  ; video memory size
 %define VIDMEM IMAGE_SIZE ; back buffer video memory
 %define VIDMED 0xA000	  ; system video memory
+%define vsyncPort 0x3da
 
 ; ==========================================
 ; PROTOTYPE	: void set_vga_mode(void)
@@ -10,12 +11,12 @@
 ; RETURN	: n/a
 ; ==========================================
 set_vga_mode:
-	pusha
+	push ax
 
 	mov ax, 0x13	; 320x200 @ 256 color mode
 	int 10h			; call BIOS interrupt
 
-	popa
+	pop ax
 	ret
 
 ; ==========================================
@@ -24,21 +25,23 @@ set_vga_mode:
 ; RETURN	: n/a
 ; ==========================================
 vsync:
-	pusha
-	mov dx, 0x3DA	; port 0x3DA
+	push ax
+	push dx
+	mov dx, vsyncPort
 
-.l1:
-	in al, dx		; port
-	test al, 8		; test bit 4
-	jnz .l1			; retrace in progress?
+	.l1:
+		in al, dx
+		test al, 1 << 3	; Is bit 3 1 or 0?
+		jnz .l1			; retrace in progress?
 
-.l2:
-	in al, dx		; port
-	test al, 8		; test bit 4
-	jz .l2			; new retrace?
-	
-	popa
-	ret
+	.l2:
+		in al, dx
+		test al, 1 << 3	; Is bit 3 1 or 0?
+		jz .l2			; new retrace?
+		
+		pop dx
+		pop ax
+		ret
 
 ; =====================================================
 ; PROTOTYPE	: void blit( unsigned char *pixels,
@@ -55,7 +58,12 @@ blit:
 	push bp
 	mov bp, sp			; top of the stack
 	
-	pusha
+	push ax
+	push bx
+	push cx
+	push dx
+	push si
+	push di
 
 	cmp word [bp+14], 0 ; sw is 0?
 	je .end
@@ -119,10 +127,9 @@ blit:
 	jmp .noclip				; go and blit the visible part
 
 .clipt: ; clip top
-	cmp word [bp+8], 0	; dy partially out of bounds on the top
+	mov bx, word [bp + 8] ; dy
+	cmp bx, 0	; dy partially out of bounds on the top
 	jge .noclip			; quick exit if it's not the case
-
-	mov bx, [bp+8]		; use the dy as an offset
 
 	sub [bp+16], bx	; offset sy to the top
 	add [bp+12], bx	; offset sh to the bottom
@@ -159,17 +166,18 @@ blit:
 	add si, ax			; sx + sy * w
 
 	xor ax, ax			; clear AX
-	xor bx, bx			; clear BX
+	xor bx, bx
 	xor cx, cx			; clear CX
-	xor dx, dx			; clear DX
+	mov dl, byte [bp + 6]
+	mov dh, byte [bp + 4]
 
 .loop:
 	lodsb					; load [DS:SI] into AL
 
-	cmp al, byte [bp+6]		; compare AL to transparent color
+	cmp al, dl		; compare AL to transparent color
 	je .transparent			; skip this pixel if transparent
 
-	add al, byte [bp+4]		; add tint color
+	add al, dh		; add tint color
 
 	stosb					; store AL into [ES:DI]
 	jmp .next				; next pixel
@@ -188,11 +196,19 @@ blit:
 
 	inc cx					; increment height
 	cmp cx, [bp+12]			; sh 
+	mov dl, byte [bp + 6]
+	mov dh, byte [bp + 4]
 	jl .loop				; next row
 
 .end:
-	popa
+	pop di
+	pop si
+	pop dx
+	pop cx
+	pop bx
+	pop ax
 	pop bp
+	
 	ret 22					; 11 params * 2 bytes
 
 	.sxoffset: dw 0			; source X offset
@@ -213,27 +229,31 @@ blit_fast:
 	push bp
 	mov bp, sp			; top of the stack
 	
-	pusha
+	push ax
+	push bx
+	push cx
+	push dx
+	push si
+	push di
 
 	mov ax, VIDMEM		; pointer to screen buffer
 	mov es, ax			; 
 
 	mov ax, VIDMEW		; screen width
-	mov dx, [bp+8]		; dy
+	mov dx, word [bp + 8] ; dy
 	mul dx
 
 	mov di, ax			; dy * screen width
-	add di, [bp+10]		; dx
+	add di, word [bp + 10] ; dx
 
 	mov dx, VIDMEW		; screen width
-	sub dx, [bp+14]		; sw
+	mov ax, word [bp + 14] ; sw
+	sub dx, ax
+	mov word [.dxoffset], dx ; destination offset
 
-	mov [.dxoffset], dx ; destination offset
-
-	mov dx, [bp+22]		; w
-	sub dx, [bp+14]		; sw
-
-	mov [.sxoffset], dx ; source offset
+	mov dx, word [bp + 22] ; w
+	sub dx, ax
+	mov word [.sxoffset], dx ; source offset
 
 	mov ax, [bp+22]		; w
 	mov dx, [bp+16]		; sy
@@ -246,15 +266,16 @@ blit_fast:
 	xor ax, ax			; clear AX
 	xor bx, bx			; clear BX
 	xor cx, cx			; clear CX
-	xor dx, dx			; clear DX
+	mov dl, byte [bp + 6]
+	mov dh, byte [bp + 4]
 
 .loop:
-	lodsb					; load [DS:SI] into AL
+	lodsb
 
-	cmp al, byte [bp+6]		; compare AL to transparent color
+	cmp al, dl		; compare AL to transparent color
 	je .transparent			; skip this pixel if transparent
 
-	add al, byte [bp+4]		; add tint color
+	add al, dh		; add tint color
 
 	stosb					; store AL into [ES:DI]
 	jmp .next				; next pixel
@@ -264,7 +285,7 @@ blit_fast:
 
 .next:
 	inc bx					; increment width
-	cmp bx, [bp+14]			; sw
+	cmp bx, word [bp + 14]			; sw
 	jl .loop				; end of row?
 
 	xor bx, bx				; reset width
@@ -272,12 +293,20 @@ blit_fast:
 	add si, [.sxoffset]		; increment source offset
 
 	inc cx					; increment height
-	cmp cx, [bp+12]			; sh 
-	jl .loop				; next row
+	mov dl, byte [bp + 6]
+	mov dh, byte [bp + 4]
+	cmp cx, word [bp + 12] ; sh 
+	jl .loop
 
 .end:
-	popa
+	pop di
+	pop si
+	pop dx
+	pop cx
+	pop bx
+	pop ax
 	pop bp
+
 	ret 22					; 11 params * 2 bytes
 
 	.sxoffset: dw 0			; source X offset
@@ -294,7 +323,12 @@ blit_rect:
 	push bp
 	mov bp, sp			; top of the stack
 
-	pusha
+	push ax
+	push bx
+	push cx
+	push dx
+	push si
+	push di
 
 	mov ax, VIDMEM		; pointer to screen buffer
 	mov es, ax			; 
@@ -313,9 +347,10 @@ blit_rect:
 
 	xor ah, ah
 	mov al, byte [bp+4] ; color
+	mov si, word [bp + 8] ; Width
 
 .loop:
-	mov cx, [bp+8]		; width
+	mov cx, si
 	rep stosb			; draw one row
 
 	add di, dx			; next row
@@ -324,8 +359,14 @@ blit_rect:
 	jnz .loop			; continue unless index 0
 
 .end:
-	popa
+	pop di
+	pop si
+	pop dx
+	pop cx
+	pop bx
+	pop ax
 	pop bp
+
 	ret	10				; 5 params * 2 bytes
 
 %if 0

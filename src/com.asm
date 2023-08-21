@@ -2,12 +2,14 @@
 %define IMAGE_SIZE ((SECTORS + 1) * 512)	; SECTORS + 1 (~= 18) * 512 bytes
 
 bits 16		; 16 bit mode
-org 100h	; entry point "address"
+org 0x100	; MS DOS programs code starts at offset 0x100
 
-; entry point
+
 _start:
-	call main	; call main
-	jmp $		; loop forever
+	call main
+	
+	cli
+	hlt
 
 ; mixin sys and main
 %include 'sys/txt.asm'

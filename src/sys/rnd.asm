@@ -1,3 +1,4 @@
+
 %define MAX_SHORT 65535
 ; =================================
 ; PROTOTYPE	: void randomize(void)
@@ -5,12 +6,12 @@
 ; RETURN	: n/a
 ; =================================
 randomize:
-	pusha
+	push dx
 
 	call ticks
-	mov [seed], dx ; tickcount as seed
+	mov word [seed], dx ; tickcount as seed
 
-	popa
+	pop dx
 	ret
 
 ; ================================
@@ -19,19 +20,21 @@ randomize:
 ; RETURN	: random number in AX
 ; ================================
 random:
-	pusha
+	push bx
+	push dx
 	
-	mov ax, [seed]
+	mov ax, word [seed]
 	mov dx, 33333
 	mul dx				; multiply SEED with AX
 
 	inc ax				; increment seed
-	mov [seed], ax		; use AX as new seed
-	mov [.rnd], dx		; save random value
+	mov word [seed], ax		; use AX as new seed
+	mov word [.rnd], dx		; save random value
+	mov ax, dx
 
-	popa
+	pop dx
+	pop bx
 
-	mov ax, [.rnd]		; return random value in AX
 	ret
 
 	.rnd dw 0

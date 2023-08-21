@@ -3,10 +3,9 @@
 %define STACK_SIZE 256						; 4096 bytes in paragraphs
 
 bits 16										; 16 bit mode
-;org 0x7C00									; BIOS boot sector entry point
 
 start:
-	cli ; disable interrupts
+	cli
 	
 	;
 	; Notes:
@@ -21,17 +20,14 @@ start:
 	mov ss, ax
 	mov sp, STACK_SIZE * 16 ; 4096 in bytes
 
-	sti ; enable interrupts
-
+	sti
 	mov ax, 07C0h			; point all segments to _start
 	mov ds, ax
 	mov es, ax
-	mov fs, ax
-	mov gs, ax
 
 	; dl contains the drive number
 
-	mov ax, 0				; reset disk function
+	xor ah, ah				; reset disk function
 	int 13h					; call BIOS interrupt
 	jc disk_reset_error
 
@@ -52,11 +48,10 @@ start:
 	; take the time and scroll down below) is *loaded* automatically by BIOS 
 	; and therefore there is no need to read it again ...
 
-	push es				; save es
-
+	push es
 	mov ax, 07E0h		; destination location (address of _start)
 	mov es, ax			; destination location
-	mov bx, 0			; index 0
+	xor bx, bx			; index 0
 
 	mov ah, 2			; read sectors function
 	mov al, SECTORS		; number of sectors
@@ -67,27 +62,26 @@ start:
 
 	jc disk_read_error
 
-	pop es				; restore es
-
-	mov si, boot_msg	; boot message
-	call _puts			; print
+	pop es
+	lea si, boot_msg
+	call _puts
 
 	jmp 07E0h:0000h		; jump to _start (a.k.a stage 2)
 
 disk_reset_error:
-	mov si, disk_reset_error_msg
+	lea si, disk_reset_error_msg
 	jmp fatal
 
 disk_read_error:
-	mov si, disk_read_error_msg
+	lea si, disk_read_error_msg
 
 fatal:
 	call _puts	; print message in [DS:SI]
 
-	mov ax, 0	; wait for a keypress
+	xor ax, ax	; wait for a keypress
 	int 16h
 
-	mov ax, 0	; reboot
+	xor ax, ax	; reboot
 	int 19h
 
 ; ===========================================
@@ -96,18 +90,19 @@ fatal:
 ; RETURN	: n/a
 ; ===========================================
 _puts:
-	lodsb		; move byte [DS:SI] into AL
+	mov ah, 0xe ; Teletype function
 
-	cmp al, 0	; 0 == end of string ?
-	je .end
+	.nextChar:
+		lodsb		; move byte [DS:SI] into AL
 
-	mov ah, 0Eh ; display character function
-	int 10h		; call BIOS interrupt
+		or al, al
+		jz .end
+		int 10h		; call BIOS interrupt
 
-	jmp _puts	; next character
+		jmp .nextChar
 
-.end:
-	ret
+	.end:
+		ret
 
 disk_reset_error_msg: db 'Could not reset disk', 0
 disk_read_error_msg: db 'Could not read disk', 0

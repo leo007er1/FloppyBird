@@ -2,7 +2,7 @@ draw_flats:
 	push ax
 	push cx
 
-	mov ax, 0
+	xor ax, ax
 
 .flats:
 	push flats

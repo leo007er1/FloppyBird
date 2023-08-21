@@ -1,3 +1,6 @@
+[bits 16]
+; [cpu 8086]
+
 main:
 	call set_vga_mode
 	call randomize
@@ -25,7 +28,7 @@ main:
 	
 	call kbhit
 
-	test al, al
+	or al, al
 	jz .intro
 
 	cmp al, 27					; escape
@@ -92,13 +95,13 @@ main:
 	ret
 
 .reboot:
-%ifdef COM
-	call set_text_mode
-	int 20h						; exit this bad-boy :P
-%else
-	call reboot					; reboot this bad-boy :P
-	ret
-%endif
+	%ifdef COM
+		call set_text_mode
+		int 20h						; exit this bad-boy :P
+	%else
+		call reboot					; reboot this bad-boy :P
+		ret
+	%endif
 
 draw:
 	call draw_background
