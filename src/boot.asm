@@ -20,19 +20,17 @@ start:
 	mov ss, ax
 	mov sp, STACK_SIZE * 16 ; 4096 in bytes
 
-	sti
 	mov ax, 07C0h			; point all segments to _start
 	mov ds, ax
 	mov es, ax
+	sti
 
 	; dl contains the drive number
-
 	xor ah, ah				; reset disk function
 	int 13h					; call BIOS interrupt
 	jc disk_reset_error
 
 	; FIXME: if SECTORS + 1 > 18 (~= max sectors per track) 
-	; then we should try to do _multiple_ reads
 	; 
 	; Notes:
 	;
@@ -49,24 +47,34 @@ start:
 	; and therefore there is no need to read it again ...
 
 	push es
-	mov ax, 07E0h		; destination location (address of _start)
-	mov es, ax			; destination location
-	xor bx, bx			; index 0
+	mov ax, 07E0h 		; es:bx is the destination location (address of _start)
+	mov es, ax
+	xor bx, bx
 
-	mov ah, 2			; read sectors function
-	mov al, SECTORS		; number of sectors
-	mov ch, 0			; cylinder number
-	mov dh, 0			; head number
-	mov cl, 2			; starting sector number
-	int 13h				; call BIOS interrupt
+	.read_disk:
+		mov ah, 2			; read sectors function
+		mov al, SECTORS		; number of sectors
+		; CHS addressing
+		xor ch, ch			; cylinder number
+		xor dh, dh			; head number
+		mov cl, 2			; starting sector number. Starts from 1, not 0
+		stc 				; Error prevention
+		int 13h				; call BIOS interrupt
+		jc .check
 
-	jc disk_read_error
+		pop es
+		lea si, boot_msg
+		call _puts
 
-	pop es
-	lea si, boot_msg
-	call _puts
+		jmp 07E0h:0000h		; jump to _start (a.k.a stage 2)
 
-	jmp 07E0h:0000h		; jump to _start (a.k.a stage 2)
+	.check:
+		add byte [read_attempts], 1
+		cmp byte [read_attempts], 3
+		je disk_read_error
+
+		jmp .read_disk
+
 
 disk_reset_error:
 	lea si, disk_reset_error_msg
@@ -107,6 +115,7 @@ _puts:
 disk_reset_error_msg: db 'Could not reset disk', 0
 disk_read_error_msg: db 'Could not read disk', 0
 boot_msg: db 'Booting Floppy Bird ... ', 0
+read_attempts: db 0
 
 times 510 - ($ - $$) db 0	; pad to 510 bytes
 dw 0xAA55					; pad 2 more bytes = 512 bytes = THE BOOT SECTOR
@@ -114,7 +123,9 @@ dw 0xAA55					; pad 2 more bytes = 512 bytes = THE BOOT SECTOR
 ; entry point
 _start:
 	call main				; call main
-	jmp $					; loop forever
+	
+	cli
+	hlt
 
 ; mixin sys and main
 %include 'sys/txt.asm'

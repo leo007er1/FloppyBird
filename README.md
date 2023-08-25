@@ -1,9 +1,9 @@
 Floppy Bird
 ===========
 Floppy Bird is a `clone` of the infamous Flappy Bird written in 
-16 bit (x86) assembly. 
+16 bit (x86) assembly. This is a fork of the original project with an aim to better suit it to my own 16-bit operating system [MascOS](https://github.com/leo007er1/MascOS), and to generally try to improve it.
 
-In other words it *works* on **RAW METAL** and doesn't require an underlying
+In *works* on **RAW METAL** and doesn't require an underlying
 operating system, it is an *operating system* on its own.
 
 ![Floppy Bird](demo.gif?raw=true "Floppy Bird")
@@ -60,7 +60,7 @@ In the example above, `/dev/sdb` is your USB Drive.
 You can use the [Raw Write 32](http://www.netbsd.org/~martin/rawrite32/)
 utility or your favorite CD Burner like [CDBurnerXP](https://cdburnerxp.se/en/home).
 
-##### M$-DOS (BONUS)
+##### MS-DOS
 It is also possible to run `Floppy Bird` as a regular `.COM` executable in any
 `DOS-like` environment, like DOSBox for instance.
 

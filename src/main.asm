@@ -1,5 +1,5 @@
 [bits 16]
-; [cpu 8086]
+[cpu 286]
 
 main:
 	call set_vga_mode
